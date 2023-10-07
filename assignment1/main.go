@@ -31,14 +31,21 @@ func createclients(num int) *client.Clientlist{
 
 func main(){
 	// fmt.Println("yo")
+	// Modify the line below to indicate the number of clients. 
+	// START
 	clientlist := createclients(10)
+	// END
 	
 	fmt.Println("The server is", clientlist.Getmax())
 	clientlist.PrintClients()
 
+	// Modify the lines below to indicate which clients send to which clients
+	// START
 	send(0, 1, clientlist)
 	send(1, 0, clientlist)
 	send(2, 9, clientlist)
+	// END
+
 	for _, client := range clientlist.Clients{
 		go client.Receive(clientlist)
 	}
