@@ -9,7 +9,7 @@ import (
 )
 
 func send(from int, to int, clientlist *client.Clientlist){
-	go clientlist.Clients[from].Send(message.Message{Message: "Hello", To: to}, &client.Clientlist{})
+	go clientlist.Clients[from].Send(message.Message{Message: "Hello", To: to}, clientlist)
 }
 
 func main(){
