@@ -35,7 +35,7 @@ func (server *Server) Send(msg message.Message) {
 	*/
 	queue.Lock.Lock()
 	queue.Queue = append(queue.Queue, msg)
-	fmt.Println("Message from", msg.From, "has been sent to the queue")
+	fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Message from", msg.From, "has been sent to the queue")
 	queue.Lock.Unlock()
 	server.queuesender()
 }
@@ -63,7 +63,7 @@ func (server *Server) Receive() {
 				Counter: server.Counter,
 				Message: msg.Message,
 			}
-			fmt.Println("Server channel", 0, "just received a message from", msg.From, ". Counter value is now", server.Counter)
+			fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", 0, "just received a message from", msg.From, ". Counter value is now", server.Counter)
 			server.Lock.Unlock()
 			server.Send(message)
 		case msg := <-server.Channel[1]:
@@ -74,7 +74,7 @@ func (server *Server) Receive() {
 				Counter: server.Counter,
 				Message: msg.Message,
 			}
-			fmt.Println("Server channel", 1, "just received a message from", msg.From, ". Counter value is now", server.Counter)
+			fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", 1, "just received a message from", msg.From, ". Counter value is now", server.Counter)
 			server.Lock.Unlock()
 			server.Send(message)
 		case msg := <-server.Channel[2]:
@@ -85,7 +85,7 @@ func (server *Server) Receive() {
 				Counter: server.Counter,
 				Message: msg.Message,
 			}
-			fmt.Println("Server channel", 2, "just received a message from", msg.From, ". Counter value is now", server.Counter)
+			fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", 2, "just received a message from", msg.From, ". Counter value is now", server.Counter)
 			server.Lock.Unlock()
 			server.Send(message)
 		case msg := <-server.Channel[3]:
@@ -96,7 +96,7 @@ func (server *Server) Receive() {
 				Counter: server.Counter,
 				Message: msg.Message,
 			}
-			fmt.Println("Server channel", 3, "just received a message from", msg.From, ". Counter value is now", server.Counter)
+			fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", 3, "just received a message from", msg.From, ". Counter value is now", server.Counter)
 			server.Lock.Unlock()
 			server.Send(message)
 		case msg := <-server.Channel[4]:
@@ -107,12 +107,12 @@ func (server *Server) Receive() {
 				Counter: server.Counter,
 				Message: msg.Message,
 			}
-			fmt.Println("Server channel", 4, "just received a message from", msg.From, ". Counter value is now", server.Counter)
+			fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", 4, "just received a message from", msg.From, ". Counter value is now", server.Counter)
 			server.Lock.Unlock()
 			server.Send(message)
 		default:
 			time.Sleep(1 * time.Second)
-			fmt.Println("Server is alive and is listening to 5 channels")
+			fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Ping] Server is alive and is listening to 5 channels")
 		}
 	}
 }
@@ -143,25 +143,27 @@ func (server *Server) queuesender() {
 					Counter: server.Counter,
 					Message: msg.Message,
 				}
-				fmt.Println("[", time.Now().UTC(), "] [Server Event] Server has forwarded the message from", msg.From, "to", id)
+				fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server has forwarded the message from", msg.From, "to", id)
 				// client.Lock.Unlock()
 			}
 			server.Lock.Unlock()
 		} else {
-			fmt.Println("[", time.Now().UTC(), "] [Server Event] Server has dropped the message from", msg.From)
+			fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server has dropped the message from", msg.From)
 		}
-		queue.Lock.Lock()
+		// queue.Lock.Lock()
 		if len(queue.Queue) > 1 {
 			queue.Queue = queue.Queue[1:]
 		} else {
 			queue.Queue = make([]message.Message, 0)
 		}
-		queue.Lock.Unlock()
+		// queue.Lock.Unlock()
 	}
 }
 
-// func (server *Server) sendtoclient(client *Client){
-// 	client.Lock.Lock()
-// 	defer client.Lock.Unlock()
-// 	client.Channel <-
-// }
+
+func (server *Server) CloseChannels(){
+	for idx, channel := range server.Channel{
+		close(channel)
+		fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", idx, "closed")
+	}
+}
