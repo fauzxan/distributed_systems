@@ -46,20 +46,8 @@ func createServer(clientlist *client.Clientlist) *client.Server {
 	}
 }
 
-// func SetupCloseHandler(server *client.Server) {
-// 	c := make(chan os.Signal)
-// 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-// 	go func() {
-// 		<-c
-// 		fmt.Println("\n\n\n\r- Ctrl+C pressed in Terminal")
-// 		fmt.Println("Closing server channels...")
-// 		server.CloseChannels()
-// 		os.Exit(0)
-// 	}()
-// }
 
 func main() {
-	// fmt.Println("yo")
 	// Modify the line below to indicate the number of clients.
 	// START
 	clientlist := createclients(10)
@@ -76,8 +64,8 @@ func main() {
 	send(1, clientlist, server)
 	send(2, clientlist, server)
 	send(3, clientlist, server)
-	// send(4, clientlist, server)
-	// send(5, clientlist, server)
+	send(4, clientlist, server)
+	send(5, clientlist, server)
 	// END
 
 	for _, client := range clientlist.Clients {
