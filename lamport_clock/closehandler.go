@@ -8,7 +8,7 @@ import (
 	"core/client"
 )
 
-func SetupCloseHandler(server *client.Server) {
+func SetupCloseHandler(server *client.Server, clientlist *client.Clientlist) {
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -16,6 +16,7 @@ func SetupCloseHandler(server *client.Server) {
 		fmt.Println("\n\n\n\rCtrl+C pressed in Terminal!")
 		fmt.Println("Closing server channels...")
 		server.CloseChannels()
+		clientlist.CloseChannels()
 		os.Exit(0)
 	}()
 }

@@ -2,10 +2,10 @@ package client
 
 import (
 	"core/message"
-	"fmt"
 	"math/rand"
 	"sync"
 	"time"
+	"github.com/fatih/color"
 )
 
 type Client struct {
@@ -13,7 +13,10 @@ type Client struct {
 	Lock     sync.Mutex
 	Clientid int
 	Channel  chan message.Message
+	Received []int
 }
+
+var clnt = color.New(color.FgHiGreen).Add(color.BgBlack)
 
 // Call this by invoking client.send(msg, clientlist)
 func (client *Client) Send(msg message.Message, clientlist *Clientlist, server *Server) {
@@ -26,10 +29,9 @@ func (client *Client) Send(msg message.Message, clientlist *Clientlist, server *
 	*/
 
 	client.Lock.Lock()
-	// clientlist.PrintClients()
 	if clientlist.Check(msg.From) {
 		client.Counter++
-		fmt.Println("[", time.Now().UTC().String()[11:27], "] [Client Event] Sent from", client.Clientid, "to server. Sender counter is now", client.Counter) // Print the counter of the client id
+		clnt.Println("[", time.Now().UTC().String()[11:27], "] [Client Event] Sent from", client.Clientid, "to server. Sender counter is now", client.Counter) // Print the counter of the client id
 		server.Channel[rand.Intn(5)] <- message.Message{
 			Counter: client.Counter,
 			Message: msg.Message,
@@ -37,7 +39,7 @@ func (client *Client) Send(msg message.Message, clientlist *Clientlist, server *
 		}
 
 	} else {
-		fmt.Println("[", time.Now().UTC().String()[11:27], "] [Client Event] [Error] Invalid send id", msg.From)
+		clnt.Println("[", time.Now().UTC().String()[11:27], "] [Client Event] [Error] Invalid send id", msg.From)
 	}
 	client.Lock.Unlock()
 }
@@ -54,12 +56,17 @@ func (client *Client) Receive(clientlist *Clientlist) {
 		case msg := <-client.Channel:
 			client.Lock.Lock()
 			client.Counter = max(msg.Counter, client.Counter) + 1
-			fmt.Println("[", time.Now().UTC().String()[11:27], "] [Client Event]", client.Clientid, "received a message from", msg.From, "Update counter value to", client.Counter)
+			clnt.Println("[", time.Now().UTC().String()[11:27], "] [Client Event]", client.Clientid, "received a message from", msg.From, "Update counter value to", client.Counter)
+			client.Received = append(client.Received, msg.From)
 			client.Lock.Unlock()
 		default:
 			time.Sleep(1 * time.Second)
-			// fmt.Println("Client", client.Clientid , "is awake and waiting")
+			// clnt.Println("Client", client.Clientid , "is awake and waiting")
 
 		}
 	}
+}
+
+func (client *Client) PrintreceivedOrder() {
+	clnt.Println("Client", client.Clientid, "received order:", client.Received)
 }

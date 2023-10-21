@@ -58,5 +58,6 @@ func (clientlist *Clientlist) CloseChannels(){
 	for clientid, client := range clientlist.Clients{
 		close(client.Channel)
 		fmt.Println("Closed channel for", clientid)
+		client.PrintreceivedOrder()
 	}
 }

@@ -50,10 +50,11 @@ func createServer(clientlist *client.Clientlist) *client.Server {
 func main() {
 	// Modify the line below to indicate the number of clients.
 	// START
-	clientlist := createclients(10)
+	num := 10
 	// END
+	clientlist := createclients(num)
 	server := createServer(clientlist) // creates 5 channels for the server and returns the address of the server.
-	SetupCloseHandler(server)
+	SetupCloseHandler(server, clientlist)
 
 	fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] The server is active with id", server.Serverid)
 	clientlist.PrintClients()
@@ -72,7 +73,10 @@ func main() {
 		go client.Receive(clientlist)
 	}
 	go server.Receive()
-	time.Sleep(5 * time.Second)
-	clientlist.PrintClients()
+
+	// Keep the parent thread alive!!
+	for {
+		time.Sleep(1000)
+	}
 	
 }

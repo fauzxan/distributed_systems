@@ -2,10 +2,11 @@ package client
 
 import (
 	"core/message"
-	"fmt"
 	"math/rand"
 	"sync"
 	"time"
+
+	"github.com/fatih/color"
 )
 
 type Server struct {
@@ -26,6 +27,10 @@ var queue Queue = Queue{
 	make([]message.Message, 0),
 }
 
+var svr = color.New(color.FgWhite).Add(color.BgBlack)
+var q = color.New(color.FgCyan).Add(color.BgBlack)
+var causality = color.New(color.FgHiRed).Add(color.BgBlack)
+
 func (server *Server) Send(msg message.Message) {
 	/*
 		In this function, we will make use of a queue to send messages out to all the clients. Whenever some function calls server.Send(), we
@@ -35,7 +40,7 @@ func (server *Server) Send(msg message.Message) {
 	*/
 	queue.Lock.Lock()
 	queue.Queue = append(queue.Queue, msg)
-	fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Message from", msg.From, "has been sent to the queue")
+	svr.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Message from", msg.From, "has been sent to the queue")
 	queue.Lock.Unlock()
 	server.queuesender()
 }
@@ -56,68 +61,58 @@ func (server *Server) Receive() {
 		// 2. The calling the server.Send() function to send the values over to the queue.
 		select {
 		case msg := <-server.Channel[0]:
-			// server.Lock.Lock()
-			server.Counter = server.UpdateVectorClock(msg.Counter, server.Counter)
+			server.Counter = server.UpdateVectorClock(msg.Counter, server.Counter, msg.From)
 			server.Counter[server.Serverid]++
 			message := message.Message{
 				From:    msg.From,
 				Counter: server.Counter,
 				Message: msg.Message,
 			}
-			fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", 0, "just received a message from", msg.From, "| Counter value is now", server.Counter)
-			// server.Lock.Unlock()
-			server.Send(message)
+			svr.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", 0, "just received a message from", msg.From, "| Counter value is now", server.Counter)
+			go server.Send(message)
 		case msg := <-server.Channel[1]:
-			// server.Lock.Lock()
-			server.Counter = server.UpdateVectorClock(msg.Counter, server.Counter)
+			server.Counter = server.UpdateVectorClock(msg.Counter, server.Counter, msg.From)
 			server.Counter[server.Serverid]++
 			message := message.Message{
 				From:    msg.From,
 				Counter: server.Counter,
 				Message: msg.Message,
 			}
-			fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", 1, "just received a message from", msg.From, "| Counter value is now", server.Counter)
-			// server.Lock.Unlock()
-			server.Send(message)
+			svr.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", 1, "just received a message from", msg.From, "| Counter value is now", server.Counter)
+			go server.Send(message)
 		case msg := <-server.Channel[2]:
-			// server.Lock.Lock()
-			server.Counter = server.UpdateVectorClock(msg.Counter, server.Counter)
+			server.Counter = server.UpdateVectorClock(msg.Counter, server.Counter, msg.From)
 			server.Counter[server.Serverid]++
 			message := message.Message{
 				From:    msg.From,
 				Counter: server.Counter,
 				Message: msg.Message,
 			}
-			fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", 2, "just received a message from", msg.From, "| Counter value is now", server.Counter)
-			// server.Lock.Unlock()
-			server.Send(message)
+			svr.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", 2, "just received a message from", msg.From, "| Counter value is now", server.Counter)
+			go server.Send(message)
 		case msg := <-server.Channel[3]:
-			// server.Lock.Lock()
-			server.Counter = server.UpdateVectorClock(msg.Counter, server.Counter)
+			server.Counter = server.UpdateVectorClock(msg.Counter, server.Counter, msg.From)
 			server.Counter[server.Serverid]++
 			message := message.Message{
 				From:    msg.From,
 				Counter: server.Counter,
 				Message: msg.Message,
 			}
-			fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", 3, "just received a message from", msg.From, "| Counter value is now", server.Counter)
-			// server.Lock.Unlock()
-			server.Send(message)
+			svr.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", 3, "just received a message from", msg.From, "| Counter value is now", server.Counter)
+			go server.Send(message)
 		case msg := <-server.Channel[4]:
-			// server.Lock.Lock()
-			server.Counter = server.UpdateVectorClock(msg.Counter, server.Counter)
+			server.Counter = server.UpdateVectorClock(msg.Counter, server.Counter, msg.From)
 			server.Counter[server.Serverid]++
 			message := message.Message{
 				From:    msg.From,
 				Counter: server.Counter,
 				Message: msg.Message,
 			}
-			fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", 4, "just received a message from", msg.From, "| Counter value is now", server.Counter)
-			// server.Lock.Unlock()
-			server.Send(message)
+			svr.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", 4, "just received a message from", msg.From, "| Counter value is now", server.Counter)
+			go server.Send(message)
 		default:
 			time.Sleep(1 * time.Second)
-			fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Ping] Server is alive and is listening to 5 channels")
+			svr.Println("[", time.Now().UTC().String()[11:27], "] [Server Ping] Server is alive and is listening to 5 channels")
 		}
 	}
 }
@@ -132,14 +127,17 @@ func (server *Server) queuesender() {
 					the message.
 				3. The message will now be sent to the all the channels in the clientlist, except for the one with clientid == msg.From.
 	*/
-
+	queue.Lock.Lock()
+	defer queue.Lock.Unlock()
+	if len(queue.Queue) == 0 {
+		queue.Queue = make([]message.Message, 0)
+		return
+	}
 	for _, msg := range queue.Queue {
-		// queue.Lock.Lock()
+		q.Println("[Queue state] Queue is sending now... Head of queue is from", queue.getQueueIds())
 		if rand.Intn(10) < 5 {
-			// server.Lock.Lock()
 			for id, client := range server.List.Clients {
 				server.Counter[server.Serverid]++
-				// client.Lock.Lock()
 				if id == msg.From {
 					continue
 				}
@@ -148,20 +146,17 @@ func (server *Server) queuesender() {
 					Counter: server.Counter,
 					Message: msg.Message,
 				}
-				fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server has forwarded the message from", msg.From, "to", id, "| Counter value is now", server.Counter)
-				// client.Lock.Unlock()
+				svr.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server has forwarded the message from", msg.From, "to", id, "| Counter value is now", server.Counter)
 			}
-			// server.Lock.Unlock()
 		} else {
-			fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server has dropped the message from", msg.From)
+			svr.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server has dropped the message from", msg.From)
 		}
-		// queue.Lock.Lock()
 		if len(queue.Queue) > 1 {
 			queue.Queue = queue.Queue[1:]
 		} else {
 			queue.Queue = make([]message.Message, 0)
 		}
-		// queue.Lock.Unlock()
+		q.Println("[Queue state] Removing from queue now... State of queue is", queue.getQueueIds())
 	}
 }
 
@@ -173,23 +168,40 @@ UTILITY FUNCTIONS
 func (server *Server) CloseChannels() {
 	for idx, channel := range server.Channel {
 		close(channel)
-		fmt.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", idx, "closed")
+		svr.Println("[", time.Now().UTC().String()[11:27], "] [Server Event] Server channel", idx, "closed")
 	}
 }
 
-func (server *Server) UpdateVectorClock(V1 []int, V2 []int) []int {
+func (server *Server) UpdateVectorClock(V1 []int, V2 []int, from int) []int {
 	/*
 		Does the same thing as the one in vectorclock.go
 		V1 is the clock in the message
 		V2 is the server clock.
 	*/
+	if (V2[from] > V1[from]){
+		causality.Println("Potential causality violation")
+	}
 	for i := range V1 {
-		if (V2[i] > V1[i] && i != server.Serverid) {
-			// there is a potential causality violation
-			fmt.Println("There is a potential causality violation!!", "Incoming value at position", i, ":", V1[i], "Local value:", V2[i])
-			// return make([]int, 0)
-		}
+		// if (V2[i] > V1[i] && i == from) {
+		// 	// there is a potential causality violation
+		// 	causality.Println("There is a potential causality violation!!", "Incoming value at position", i, ":", V1[i], "Local value:", V2[i])
+		// }
 		V2[i] = max(V2[i], V1[i])
 	}
 	return V2
+}
+
+func (queue *Queue) getHead() int { // that is infact what she said
+	if len(queue.Queue) != 0 {
+		return queue.Queue[0].From
+	}
+	return -1
+}
+
+func (queue *Queue) getQueueIds() []int {
+	var list = make([]int, len(queue.Queue))
+	for i, msg := range queue.Queue {
+		list[i] = msg.From
+	}
+	return list
 }

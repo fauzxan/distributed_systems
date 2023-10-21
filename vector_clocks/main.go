@@ -12,7 +12,8 @@ import (
 )
 
 func send(from int, clientlist *client.Clientlist, server *client.Server) {
-	go clientlist.Clients[from].Send(message.Message{Message: "Hello", From: from}, clientlist, server)
+	message := message.Message{Message: "Hello", From: from}
+	go clientlist.Clients[from].Send(message, clientlist, server)
 }
 
 func createclients(num int) *client.Clientlist {
@@ -58,12 +59,12 @@ func createServer(clientlist *client.Clientlist, num int) *client.Server {
 
 
 func main() {
-	// fmt.Println("yo")
+
 	// Modify the line below to indicate the number of clients.
 	// START
 	num := 10 // number of clients
+	// END	
 	clientlist := createclients(num)
-	// END
 	server := createServer(clientlist, num) // creates 5 channels for the server and returns the address of the server.
 	SetupCloseHandler(server, clientlist)
 
@@ -72,6 +73,10 @@ func main() {
 
 	// Modify the lines below to indicate which clients send to which clients
 	// START
+	send(0, clientlist, server)
+	send(0, clientlist, server)
+	send(0, clientlist, server)
+	send(0, clientlist, server)
 	send(0, clientlist, server)
 	send(1, clientlist, server)
 	send(2, clientlist, server)

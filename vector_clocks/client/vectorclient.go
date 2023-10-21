@@ -2,10 +2,11 @@ package client
 
 import (
 	"core/message"
-	"fmt"
+	// "fmt"
 	"math/rand"
 	"sync"
 	"time"
+	"github.com/fatih/color"
 )
 
 type Client struct {
@@ -14,7 +15,10 @@ type Client struct {
 	Lock     sync.Mutex
 	Clientid int
 	Channel  chan message.Message
+	Received []int
 }
+
+var clnt = color.New(color.FgHiGreen).Add(color.BgBlack)
 
 // Call this by invoking client.send(msg, clientlist)
 func (client *Client) Send(msg message.Message, clientlist *Clientlist, server *Server) {
@@ -27,20 +31,18 @@ func (client *Client) Send(msg message.Message, clientlist *Clientlist, server *
 	*/
 
 	client.Lock.Lock()
-	// clientlist.PrintClients()
 	if clientlist.Check(msg.From) {
 		client.Counter[client.Id]++
-		fmt.Println("[", time.Now().UTC().String()[11:27], "] [Client Event] Sent from", client.Clientid, "to server. Sender counter is now", client.Counter) // Print the counter of the client id
-		server.Channel[rand.Intn(5)] <- message.Message{
+		clnt.Println("[", time.Now().UTC().String()[11:27], "] [Client Event] Sent from", client.Clientid, "to server. Sender counter is now", client.Counter) // Print the counter of the client id
+		client.Lock.Unlock()
+		server.Channel[rand.Intn(5)] <- message.Message{ 
 			Counter: client.Counter,
 			Message: msg.Message,
 			From:    client.Clientid,
 		}
-
 	} else {
-		fmt.Println("[", time.Now().UTC().String()[11:27], "] [Client Event] [Error] Invalid send id", msg.From)
+		clnt.Println("[", time.Now().UTC().String()[11:27], "] [Client Event] [Error] Invalid send id", msg.From)
 	}
-	client.Lock.Unlock()
 }
 
 func (client *Client) Receive(clientlist *Clientlist) {
@@ -54,13 +56,14 @@ func (client *Client) Receive(clientlist *Clientlist) {
 		select {
 		case msg := <-client.Channel:
 			client.Lock.Lock()
-			client.Counter = client.UpdateVectorClock(msg.Counter, client.Counter)
+			client.Counter = client.UpdateVectorClock(msg.Counter, client.Counter, msg.From)
 			client.Counter[client.Clientid] ++
-			fmt.Println("[", time.Now().UTC().String()[11:27], "] [Client Event]", client.Clientid, "received a message from", msg.From, "Update counter value to", client.Counter)
+			clnt.Println("[", time.Now().UTC().String()[11:27], "] [Client Event]", client.Clientid, "received a message from", msg.From, "Update counter value to", client.Counter)
+			client.Received = append(client.Received, msg.From)
 			client.Lock.Unlock()
 		default:
 			time.Sleep(1 * time.Second)
-			// fmt.Println("Client", client.Clientid , "is awake and waiting") // health check for each client process
+			// clnt.Println("Client", client.Clientid , "is awake and waiting") // health check for each client process
 
 		}
 	}
@@ -72,7 +75,7 @@ func (client *Client) Receive(clientlist *Clientlist) {
 UTILITY FUNCTION
 ************************
 */
-func (client *Client) UpdateVectorClock(V1 []int, V2 []int) []int{
+func (client *Client) UpdateVectorClock(V1 []int, V2 []int, from int) []int{
 	/*
 	Input:
 		V1 is the incoming vector.
@@ -88,12 +91,15 @@ func (client *Client) UpdateVectorClock(V1 []int, V2 []int) []int{
 	Finally, this function should return the updated V2, which will be places into the receiver process
 	*/
 	for i := range V1{
-		if (V2[i] > V1[i] && i != client.Clientid){
+		if (V2[i] > V1[i] && i == from){
 			// there is a potential causality violation
-			// return make([]int, 0)
-			fmt.Println("There is a potential causality violation!!")
+			clnt.Println("There is a potential causality violation!!")
 		}
 		V2[i] = max(V2[i], V1[i])
 	}
 	return V2
+}
+
+func (client *Client) PrintreceivedOrder(){
+	clnt.Println("Client",client.Id, "received order:", client.Received)
 }
