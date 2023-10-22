@@ -1,3 +1,37 @@
+> An introduction on how to verify each question has been given in the first section. The second section goes over the details of the implementation.
+
+# Answers 
+
+## Question 1
+### 1
+Clients are able to send messages to the server, which then flips a coin to see if the message should be forwarded or not. 
+### 2
+There is a total ordering of messages sent out from the server, as the server maintains a queue and orders the messages to be sent out. So all the clients receive messages in the same order. This doesn't fully mitigate the causality violation possibility all together, as the order of receiving messages at the server is still not the same as the order in which the clients sent out the messages. 
+
+## Question 2
+This question has been completely implemented in the `~/bully_algorithm` folder. So all commands listed below must be issued from there. Open up as many terminals as you want --> Each terminal will become a client when you run `go run main.go` from the parent directory. 
+
+### 1
+In order to see the joint synchronization, open up 2-3 terminal for simplicity sake, and run `go run main.go`. You will see that each client now has a unique id assigned to it, and an IP address. You will also see a menu on each terminal. Press 2 to verify that the replica is empty in each terminal. Once done, on one of the terminals, press 1, and then enter the number you want to enter into the replica of that node. 
+Client 0, 1, 2 started in three terminals respectively:
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/86db6bba-f419-47af-8aac-b44a347f949f)
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/b843bfa6-8e2f-44c8-9feb-de86b0c35b2a)
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/14cea6b4-1b09-4c15-98bf-1a09c8ce1f67)
+
+The server will synchronize once every 10 seconds. So you may enter any number of entries into the replicas in any of the terminals, and they will all be synchronized in one or two synchronziation cycles. In the SS below, there were some entries in node 0 and node 1 in the replica. They were synchronized within 2 cycles:
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/0b6f3115-a1e6-460e-924e-66dc68081140)
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/9073d449-4194-4434-8daf-b0f06ce3aaf6)
+
+### 5
+For an arbitrary node to leave the network, just hit `ctrl+c` in the terminal. 
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/bbe0474f-1830-4c95-ac02-456fda28d8aa)
+There are two cases:
+1. If the arbitrary node is the coordinator, then the rest of them will figure out that the coordinator is down when trying to ping it. || All clients ping the coordinator every 10 seconds to see if it is alive.![image](https://github.com/fauzxan/distributed_systems/assets/92146562/b83b4b8b-3453-4359-a46e-2699c7fb8f25)
+
+2. If the arbitrary node is not the coordinator, then the coordinator will detect the failure, and update it's clientlist. So next time it sends replica sync request, it won't send to the failed node. The rest of the nodes still have the failed node in their entry. But these nodes will remove the failed nodes as soon as they try and communicate with it. However, as per implementation, the non coordinator nodes never really communicate within themselves, therefore, they don't remove the failed node unless they themselves become the coordinator. ![image](https://github.com/fauzxan/distributed_systems/assets/92146562/6a61ecc7-0a42-49ce-97a8-33a086e8b1eb)
+
+
+
 # Lamport's scalar clock [1.1 and 1.2]
 
 ## Introduction
@@ -93,8 +127,5 @@ You can now press ctrl+C to see the order of messages received by the different 
 From the screenshot above, we can see that the messages are received in the same order in all the clients. 
 We can also see that the clients don't receive messages from themselves. As per the screenshot, the universal order of messages received is: [1, 0, 2, 4, 5]
 
-# Answers 
-### 1.1
-Clients are able to send messages to the server, which then flips a coin to see if the message should be forwarded or not. 
-### 1.2
-There is a total ordering of messages sent out from the server, as the server maintains a queue and orders the messages to be sent out. So all the clients receive messages in the same order. This doesn't fully mitigate the causality violation possibility all together, as the order of receiving messages at the server is still not the same as the order in which the clients sent out the messages. 
+
+# Vector Clock
