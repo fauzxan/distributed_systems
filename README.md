@@ -22,6 +22,26 @@ The server will synchronize once every 10 seconds. So you may enter any number o
 ![image](https://github.com/fauzxan/distributed_systems/assets/92146562/0b6f3115-a1e6-460e-924e-66dc68081140)
 ![image](https://github.com/fauzxan/distributed_systems/assets/92146562/9073d449-4194-4434-8daf-b0f06ce3aaf6)
 
+### 4
+In order to see a scenario, where multiple clients start the election simultaneously, spin up three clients by running `go run main.go` in three separate clients simultaneously. Then kill the coordinator terminal by pressing `ctrl+c`. The discovery phase in the other two terminals would've begun almost at the same time (separated by a few milliseconds). Previously, in order to slow down the message output, the time.Sleep() value of the CoordinatorPing() method was set to 10 seconds. However, in order to bring about the behaviour required by this question, the time.Sleep() was set to 1 second. 
+```go
+func (client *Client) Coordinatorping(){ // communicatetocoordinator
+	if (len(client.Clientlist) == 1){
+		client.Coordinator_id = client.Id
+		return
+	}
+	for {
+		time.Sleep(1*time.Second) // <-- this line was modified
+		// logic to dial coordinator tcp, and send message to the server.
+	}
+}
+```
+
+As such, we are able to observe from the following screenshots, that the two terminals simultaneously started election at `11:33:45:303`. 
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/445bb0ad-9f2a-4781-ae6a-2d2be2551081)
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/9a10ccfb-d768-461c-8c28-ea772c5a0dd3)
+
+
 ### 5
 For an arbitrary node to leave the network, just hit `ctrl+c` in the terminal. 
 ![image](https://github.com/fauzxan/distributed_systems/assets/92146562/bbe0474f-1830-4c95-ac02-456fda28d8aa)
