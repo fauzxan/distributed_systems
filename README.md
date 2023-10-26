@@ -136,7 +136,7 @@ Press 2 to view my replica
 Press 3 to view my clientlist
 ```
 
-If you are feeling old, please feel free to increase the time.Sleep() duration to something longer, so you can see the output clearly 😄. As of submission, it has been set to 5 seconds. You need to enter the sleep duration in the following methods
+If you are feeling old, please feel free to increase the `time.Sleep()` aka the timeout duration to something longer, so you can see the output clearly 😄. As of submission, it has been set to 1 seconds- so that the messages are sent and received on time. A longer timeout could result in TCP messages not reaching on time, or reaching after some other message. But, you may enter the sleep duration in the following methods to change the timout:
 
 - InvokeReplicaSync() - coordinators detect failed nodes using this
 - CoordinatorPing() - non-coordinators detect coordinator failures using this
@@ -159,6 +159,25 @@ The server will synchronize once every 10 seconds. So you may enter any number o
 ![image](https://github.com/fauzxan/distributed_systems/assets/92146562/0b6f3115-a1e6-460e-924e-66dc68081140)
 
 ![image](https://github.com/fauzxan/distributed_systems/assets/92146562/9073d449-4194-4434-8daf-b0f06ce3aaf6)
+
+### 2
+In order to measure the best and the worst case times, we make use of a timer to count the time elapsed between when the discover phase started in the clients that detect the election, and when the election ended. 
+Four clients were spun up, and a failure was triggerred with the fourth client. The number of clients that detect the failure can be controlled by the controlling the timeout. It is possible that only one node detects the failure if the timeout is large enough. As mentioned, the timeout to detect the coordinator failure needs to be set in `CoordinatorPing()`. However, for the screenshots below, the timeout was only 1s. So multiple nodes detected the failure, and the time between discovery and victory receival (for non victors)/ victory sending(for victor) was calculated for all the nodes.
+
+#### Worst case scenario:
+This happens when the client with the lowest id is the one to detect the node failure. As shown below, the lowest id client took almost 3 ms to finish the election. 
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/cbe40bb1-dbd8-4604-9234-332d15d5c1d8)
+
+#### Best case scenario
+This happens when the second highest id node is the one to detect the failure. This took around half the time as the highest id node:
+
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/ca4666ad-4a10-4ade-a6b9-231aadf58ef7)
+
+The node with the middle id took more time than highest id, but less time than lowest id node:
+
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/6d804cf9-01ce-4437-9e99-2fff39e8e47d)
+
+
 
 ### 3
 We will now consider a case where a node fails during the election. In order to achieve this, we will introduce a small delay when sending out victory messages, so we get sufficient time to fail 
