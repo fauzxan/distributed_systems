@@ -9,7 +9,9 @@ Clients are able to send messages to the server, which then flips a coin to see 
 There is a total ordering of messages sent out from the server, as the server maintains a queue and orders the messages to be sent out. So all the clients receive messages in the same order. This doesn't fully mitigate the causality violation possibility all together, as the order of receiving messages at the server is still not the same as the order in which the clients sent out the messages. 
 
 ## Question 2
-This question has been completely implemented in the `~/bully_algorithm` folder. So all commands listed below must be issued from there. Open up as many terminals as you want --> Each terminal will become a client when you run `go run main.go` from the parent directory. 
+This question has been completely implemented in the `~/bully_algorithm` folder. So all commands listed below must be issued from there. Open up as many terminals as you want --> Each terminal will become a client when you run `go run main.go` from the parent directory. Go routines are used throughout the code to get a consensus across all the nodes, but the nodes themselves are not go routines, they are complete processes running in more than one terminal. This behaviour is in line with the requirements as confirmed with Professor Sudipta.
+
+Another thing to note here is that, in some of the questions in this part, we are introducing some artificial delay using time.Sleep() to achieve some of the scenarios listed in the questions. We know that TCP orders messages in a queue. So this time.Sleep() tends to mess up the ordering of messages. So if you see the messages printed out of order, please do ignore it. Focus on the logic presented in the explanation. 
 
 ### 1
 In order to see the joint synchronization, open up 2-3 terminal for simplicity sake, and run `go run main.go`. You will see that each client now has a unique id assigned to it, and an IP address. You will also see a menu on each terminal. Press 2 to verify that the replica is empty in each terminal. Once done, on one of the terminals, press 1, and then enter the number you want to enter into the replica of that node. 
@@ -21,6 +23,75 @@ Client 0, 1, 2 started in three terminals respectively:
 The server will synchronize once every 10 seconds. So you may enter any number of entries into the replicas in any of the terminals, and they will all be synchronized in one or two synchronziation cycles. In the SS below, there were some entries in node 0 and node 1 in the replica. They were synchronized within 2 cycles:
 ![image](https://github.com/fauzxan/distributed_systems/assets/92146562/0b6f3115-a1e6-460e-924e-66dc68081140)
 ![image](https://github.com/fauzxan/distributed_systems/assets/92146562/9073d449-4194-4434-8daf-b0f06ce3aaf6)
+
+### 3
+We will now consider a case where a node fails during the election. In order to achieve this, we will introduce a small delay when sending out victory messages, so we get sufficient time to fail 
+a) the coordinator
+b) non-coordinator node
+
+The new coordinator stops two seconds before sending to the other node. This will give us enough time to fail the coordinator/ non-coordinator node. The delay has been introduced as follows:
+```go
+func (client *Client) Announcevictory(){ // Make yourself coordinator
+	send := Message{Type: VICTORY, From: client.Id, Clientlist: client.Clientlist}
+	reply := Message{}
+	fmt.Println("No higher id node found. I am announcing victory! Current clientlist (you may fail clients now):", client.Clientlist)
+	client.Printclients()
+	for id, ip := range client.Clientlist{
+		if (id == client.Id){continue}
+		clnt, err := rpc.Dial("tcp", ip)
+		if (err != nil){
+			fmt.Println("Communication to", id, "failed")
+			delete(client.Clientlist, id)
+			go client.updateclientlist()
+			continue
+		}
+		err = clnt.Call("Client.HandleCommunication", send, &reply)
+		if (err != nil){
+			fmt.Println(err)
+			continue
+		}
+		fmt.Println("Victory message sent to", id, "at", ip)
+		if (reply.Type == "ack" && id > client.Id){
+			// if you are announcing vicotry and you receive an ack message from a higher id, then just stop announcing
+			fmt.Println("Message sent to", id, "successfully")
+			fmt.Println("Client", id, "is awake")
+			break
+		}else if(reply.Type == ACK){
+			fmt.Println("Client", id, "acknowledged me as coordinator")
+		}
+		time.Sleep(2 * time.Second) // <-- DELAY IS BEING INTRODUCED HERE
+	}
+	go client.InvokeReplicaSync()
+}
+```
+
+#### Part a
+This part will fail the coordinator after discovery, but before announcement. 
+
+For this, we spun up four nodes in four different terminals. (You may do the same with 3, but I just want to demonstrate that this system works with more nodes as well)
+In the screenshot given below, we can see that the last node, with id 3 just got created and is trying to announce to everyone that it is the coordinator. We can also see that the discovery phase is done. It is in the process of announcing to everyone. 
+
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/189eaa16-30c7-47c1-8ff1-114332f5a417)
+
+
+Above, we see that the new coordinator has already sent messages to node 1 and node 2 who have acknowledge it as the coordinator. However, node 0 has not even received a victory message from node 3. So according to node 0, node 2 is the coordinator. But node 1 and node 2 think 3 is the coordinator. 
+
+##### Node 2:
+It was sending out periodic syncs-> then it received victory message from 3-> stopped sending out syncs
+
+Because of the pinging algorithm, where nodes ping the coordinator periodically, this node was able to detect that the coordinator failed, and then started an election. 
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/f565bb67-8958-4837-bc8d-2e1369188cdc)
+##### Node 1: 
+
+It was received periodic syncs-> then it received victory message from 3-> stopped sending out ping to 2 -> started sending out ping to 3
+
+Again, the pinging failed, so it started election, and lost to 2. 
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/b6218c18-99ff-47fc-b19a-cadef100afc2)
+##### Node 0:
+This node never knew any new coordinator other than 2. Hence it was, is, and continues to ping 2 only. In the middle it receives a victory message from 2, but this doesn't matter to 0, as it already believes that 2 is it's coordinator. 
+
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/0c6e115f-8ad9-4d34-96ea-e3c77401d9e0)
+
 
 ### 4
 In order to see a scenario, where multiple clients start the election simultaneously, spin up three clients by running `go run main.go` in three separate clients simultaneously. Then kill the coordinator terminal by pressing `ctrl+c`. The discovery phase in the other two terminals would've begun almost at the same time (separated by a few milliseconds). Previously, in order to slow down the message output, the time.Sleep() value of the CoordinatorPing() method was set to 10 seconds. However, in order to bring about the behaviour required by this question, the time.Sleep() was set to 1 second. 
