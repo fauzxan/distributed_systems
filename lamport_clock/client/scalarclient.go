@@ -44,7 +44,7 @@ func (client *Client) Send(msg message.Message, clientlist *Clientlist, server *
 	client.Lock.Unlock()
 }
 
-func (client *Client) Receive(clientlist *Clientlist) {
+func (client *Client) Receive() {
 	/*
 		This function will try and receive messages on behalf of the client. This will start an infinite loop for each client, listening
 		to messages coming in from that channel. Upon reception,

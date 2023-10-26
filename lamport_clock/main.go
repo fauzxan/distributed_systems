@@ -67,10 +67,11 @@ func main() {
 	send(3, clientlist, server)
 	send(4, clientlist, server)
 	send(5, clientlist, server)
+	// enablePeriodicPinging() // <-- uncomment this line to enable periodic pinging from all the clients.
 	// END
 
 	for _, client := range clientlist.Clients {
-		go client.Receive(clientlist)
+		go client.Receive()
 	}
 	go server.Receive()
 
