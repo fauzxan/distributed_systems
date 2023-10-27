@@ -9,25 +9,29 @@ The files under ~/lamport_clock combines the deliverables for 1.1 and 1.2:
 1. Setup up a client and a server that is able to meet the requirements of the system described in question 1
 2. Introduce some logic that is able to bring about total ordering of all the events. 
 
-In order to run this file, go to the parent directory, run `go build`. This will generate a file called `core`. You can run this file as an executable - `./core`.
+To run this code, go to the root directory of this part - `~/lamport_clock` and run the following command:
+```shell
+go build && ./core
+```
 
-## Editable sections
+### Editable sections
 The file name `main.go` has the main function with some sections clearly demarcated to indicate that you can edit them. 
 ```go
 // START
 <modifiable section>
 //END
 ```
-To be able to observe the output, some starter send messages have already been included. 
+To be able to observe the output, some starter send messages have already been included. This is to enable determinism, and allow us to read the output in a slow, and determinisitc way. If you can observe log outputs at very high speeds, then please uncomment the enablePeriodicPinging() method as shown below. Periodic pinging is part of the requirements for this question. 
 Periodic pinging from all the nodes can be toggled on by un-commenting the following code in `func main()`:
 ```go
-enablePeriodicPinging() // <-- uncomment this line to enable periodic pinging from all the clients.
+go enablePeriodicPinging() // <-- uncomment this line to enable periodic pinging from all the clients.
 ```
+The periodic pinging also proves that the system works with atleast 10 clients. You can increase the number of clients by changing 
 
-## Design:
+### Design:
 
 The main client logic for the code has been written in `./lamport_clock/client/client.go` file. It does the following:
-1. `client.Send(msg, clientlist, server)` : When called, will check the `clientlist` and send the `msg` to the `server` on one of its channels. The logic for choosing the channel is to choose a random channel.
+1. `client.Send(msg, clientlist, server)` : When called, will check the `clientlist` and send the `msg` to the `server` on one of its channels. The logic for choosing the channel is to choose a _random_ channel.
 2. `client.Receive(clientlist)` : This runs an infinite loop listening to messages on its channel. Each client in the clientlist has its own channel. When sending a message to a specific client, the server will use the channel of the client to send it a message. Upon receiving, the client will update it's counter based on lamport's logic -> max(incoming counter, local counter) + 1. Then it will put the sender id in a queue. This queue will be printed out in the end to indicate the order of messages received by all the clients.
 
 The main server logic for the code has been written in `./lamport_clock/client/server.go` file. It does the following:
@@ -49,7 +53,7 @@ From, the client side, the logic is simple:
 
 Whenever, client.send() is called, it will forward the message into the server's channel. The sever logic will be executed as above^
 
-## Testing and Observations:
+### Testing and Observations:
 Running the code using `.\core` will generate logs that you can use to verify the total ordering of the messages. 
 
 **The messages have been colored to enhance readability of the logs.**
@@ -71,6 +75,7 @@ The main.go has the following send commands, for this test:
 	send(5, clientlist, server)
 ```
 The order in which they are sent is not enforced, as they are all go routines, but the order in which the server receives them and sends them out is enforced.
+
 Upon executing `./core`, you will see the following:
 
 ![image](https://github.com/fauzxan/distributed_systems/assets/92146562/497c4331-331c-401f-97af-9f0847da658e)
@@ -82,19 +87,25 @@ As message from 1 was received by the server first, it is being sent into the qu
 From the above screenshot, we can also see that the server received a message from 5.
 
 After sending to all the clients, the queue pops its head, and logs the state of the queue, which is now [], or empty.
+
 Then the message received second, 0 is added to the queue, and is sent out:
+
 ![image](https://github.com/fauzxan/distributed_systems/assets/92146562/c3369613-2af0-4e78-9fee-421064a79ac8)
 
 After this, the server seems to have received messages from 2,4,3 and 5 at the same time. So the state of the queue is [2,4,3,5]. It then starts sending the messages from 2 and 4:
+
 ![image](https://github.com/fauzxan/distributed_systems/assets/92146562/7c271245-2ac1-4241-a58b-5b004a27b502)
 
 After sending 2 and 4, the message from 3 gets dropped and the message from 5 doesn't get dropped, and is sent, as shown:
+
 ![image](https://github.com/fauzxan/distributed_systems/assets/92146562/49939783-7ffa-4772-ad3d-08c0378cab68)
 
 Once you see the following output on the terminal, it means that the clients have stopped sending all together:
+
 ![image](https://github.com/fauzxan/distributed_systems/assets/92146562/92ab8dd0-2dd0-4acc-9498-f380275ec75f)
 
 You can now press ctrl+C to see the order of messages received by the different clients:
+
 ![image](https://github.com/fauzxan/distributed_systems/assets/92146562/06b7299f-d072-4976-bbc0-0dcb88e63119)
 
 From the screenshot above, we can see that the messages are received in the same order in all the clients. 
@@ -110,8 +121,97 @@ There is a total ordering of messages sent out from the server, as the server ma
 ## Question 1, part 3 - Vector clock implementation
 
 This entire section will be dedicated to answering how vector clock has been implemented, and how it is able to detect causality violations, if there are any. 
+To simulate a sample scenario, I have included the following send messages:
+```go
+	send(0, clientlist, server)
+	send(0, clientlist, server)
+	send(0, clientlist, server)
+	send(0, clientlist, server)
+	send(0, clientlist, server)
+	send(1, clientlist, server)
+	send(2, clientlist, server)
+	send(3, clientlist, server)
+	send(4, clientlist, server)
+	send(5, clientlist, server)
+```
 
+Alternatively, you may also enable periodic pinging by uncommenting the line below it:
+```go
+go enablePeriodicPinging()
+```
 
+The periodic pinging proves that the system works with atleast 10 clients. You can increase the number of clients by changing 
+
+### Editable sections
+Like the previous part, the editable sections have been marked with 
+```go
+//START
+...
+//END
+```
+
+### Design
+The code has been designed to send and receive messages, just like the previous section. But, instead of a scalar clock, the client maintains a vector clock. Every time there is a send event, the client will increment it's own counter in the vector clock and send it out. 
+
+Everytime there is a receive event, the client will compare every element of it's own clock with every element of the incoming clock. This is where it is able to detect causality violations. If the incoming message has a clock value that is lesser than the clock value for some other client, then it means that there is a potential causality violation. The code to detect causality violation is as follows:
+
+```go
+func (client *Client) UpdateVectorClock(V1 []int, V2 []int, from int) []int{
+	/*
+	Input:
+		V1 is the incoming vector.
+		V2 is the vector on the local process. 
+
+	This function receives two vectors- one from the message that just came in, and one from the local process.
+	It will compare all the elements in one vector to all the elements in the other vector, and:
+	1. See if there are any causality violations
+		If any element in V2 is greater than any element in V2, then there is a causality violation. In this case return []. The receiver will receive this and see that there
+		is a causality violation, and flag it to the terminal. It will still continue running, but there is a potential causality violation. 
+	2. Update each element in V1 and V2 as max(V1.1, V2.1), max(V1.2, V2.2) and so on
+
+	Finally, this function should return the updated V2, which will be places into the receiver process
+	*/
+	for i := range V1{
+		if (V2[i] > V1[i] && i == from){
+			// there is a potential causality violation
+			clnt.Println("There is a potential causality violation!!")
+		}
+		V2[i] = max(V2[i], V1[i])
+	}
+	return V2
+}
+```
+However, due to my excellent engineering skills, my code has been designed in a way that causality violations are impossible! This is because on the sending side the clients send deterministically. Once the server receives a message, it puts the messages into a queue! So the messages are sent in the order they are received. Further the queue is locked when the server is sending messages from it. This ensures that the queue is not modified during the process of sending. So it is impossible for the clients to receive in an order that is different from the order that is sent from the server. 
+
+### Observations and output
+In the `~/vector_clock` directory, run the following command:
+```shell
+go build && ./core
+```
+The sample scenario given above is being run. 
+
+Upon executing the above command, the clients start sending to the server:
+
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/bee9515d-0baa-4870-8a16-91ae1fc624d5)
+
+The server receives messages and stores them in a queue. The queue decides weather to drop or forward the message. If it chooses to forward the message, then all the client will start receiving it. 
+
+In the screenshot below, we can see that the server drops the message from 4, and forwards the message from 1:
+
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/42ce1cdf-1f53-4fce-8b7e-e351840dcb9f)
+
+Once done, the queue state is updated, and all the other node's messages are also received by the queue. Server drops some, and forwards some...
+
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/b4e24747-0099-4946-8cb4-654257d4b377)
+
+Once the queue state is empty, and there are no more messages to forward, the terminal shows `[Server Ping]` messages. At this point, you can press `ctrl+c` to see the order of messages recieved by the client.
+
+![image](https://github.com/fauzxan/distributed_systems/assets/92146562/5b3b5d5a-0058-40f0-9c4b-28d8c3e9e3ed)
+
+We can see that:
+
+1. The clients don't receive messages from themselves.
+2. The order of messages recieved by all the clients are the same.
 
 
 # Question 2
@@ -166,6 +266,7 @@ Four clients were spun up, and a failure was triggerred with the fourth client. 
 
 #### Worst case scenario:
 This happens when the client with the lowest id is the one to detect the node failure. As shown below, the lowest id client took almost 3 ms to finish the election. 
+
 ![image](https://github.com/fauzxan/distributed_systems/assets/92146562/cbe40bb1-dbd8-4604-9234-332d15d5c1d8)
 
 #### Best case scenario
