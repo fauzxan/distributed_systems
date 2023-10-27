@@ -16,6 +16,18 @@ func send(from int, clientlist *client.Clientlist, server *client.Server) {
 	go clientlist.Clients[from].Send(message, clientlist, server)
 }
 
+func enablePeriodicPinging(clientlist *client.Clientlist, server *client.Server){
+	/*
+		Every 10 seconds all the clients ping the server.
+	*/
+	for {
+		time.Sleep(10 * time.Second)
+		for id := range clientlist.Clients{
+			send(id, clientlist, server)
+		}
+	}
+}
+
 func createclients(num int) *client.Clientlist {
 	clientlist := client.Clientlist{
 		Lock:    sync.Mutex{},
@@ -83,6 +95,9 @@ func main() {
 	send(3, clientlist, server)
 	send(4, clientlist, server)
 	send(5, clientlist, server)
+	// END
+	// START
+	// go enablePeriodicPinging(clientlist, server) // <- uncomment this to enable periodic pinging
 	// END
 
 	for _, client := range clientlist.Clients {
