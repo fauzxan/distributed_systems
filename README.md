@@ -1,12 +1,12 @@
 🚀Golang implementation of lamport's logical clock, vector clock, as well as bully algorithm.
 
 
-# Question 1
+# Part 1
 
 Please read the following instructions to see how to run this file, and how to make amendments to different parts of the file to observe different scenarios. The explicit answers have been given below the `Testing and Observations` section. 
 
 The files under ~/lamport_clock combines the deliverables for 1.1 and 1.2:
-1. Setup up a client and a server that is able to meet the requirements of the system described in question 1
+1. Setup up a client and a server that is able to meet the requirements of the system described in part 1
 2. Introduce some logic that is able to bring about total ordering of all the events. 
 
 To run this code, go to the root directory of this part - `~/lamport_clock` and run the following command:
@@ -21,7 +21,7 @@ The file name `main.go` has the main function with some sections clearly demarca
 <modifiable section>
 //END
 ```
-To be able to observe the output, some starter send messages have already been included. This is to enable determinism, and allow us to read the output in a slow, and determinisitc way. If you can observe log outputs at very high speeds, then please uncomment the enablePeriodicPinging() method as shown below. Periodic pinging is part of the requirements for this question. 
+To be able to observe the output, some starter send messages have already been included. This is to enable determinism, and allow us to read the output in a slow, and determinisitc way. If you can observe log outputs at very high speeds, then please uncomment the enablePeriodicPinging() method as shown below. Periodic pinging is part of the requirements for this part. 
 Periodic pinging from all the nodes can be toggled on by un-commenting the following code in `func main()`:
 ```go
 go enablePeriodicPinging() // <-- uncomment this line to enable periodic pinging from all the clients.
@@ -118,7 +118,7 @@ Clients are able to send messages to the server, which then flips a coin to see 
 ### 2
 There is a total ordering of messages sent out from the server, as the server maintains a queue and orders the messages to be sent out. So all the clients receive messages in the same order. This doesn't fully mitigate the causality violation possibility all together, as the order of receiving messages at the server is still not the same as the order in which the clients sent out the messages. 
 
-## Question 1, part 3 - Vector clock implementation
+## Part 1, part 3 - Vector clock implementation
 
 This entire section will be dedicated to answering how vector clock has been implemented, and how it is able to detect causality violations, if there are any. 
 To simulate a sample scenario, I have included the following send messages:
@@ -214,10 +214,10 @@ We can see that:
 2. The order of messages recieved by all the clients are the same.
 
 
-# Question 2
-This question has been completely implemented in the `~/bully_algorithm` folder. So all commands listed below must be issued from there. Open up as many terminals as you want --> Each terminal will become a client when you run `go run main.go` from the parent directory. Go routines are used throughout the code to get a consensus across all the nodes, but the nodes themselves are not go routines, they are complete processes running in more than one terminal. This behaviour is in line with the requirements as confirmed with Professor Sudipta.
+# Part 2
+This part has been completely implemented in the `~/bully_algorithm` folder. So all commands listed below must be issued from there. Open up as many terminals as you want --> Each terminal will become a client when you run `go run main.go` from the parent directory. Go routines are used throughout the code to get a consensus across all the nodes, but the nodes themselves are not go routines, they are complete processes running in more than one terminal. This behaviour is in line with the requirements as confirmed with Professor Sudipta.
 
-Another thing to note here is that, in some of the questions in this part, we are introducing some artificial delay using time.Sleep() to achieve some of the scenarios listed in the questions. We know that TCP orders messages in a queue. So this time.Sleep() tends to mess up the ordering of messages. So if you see the messages printed out of order, please do ignore it. Focus on the logic presented in the explanation. Rest assured, taking away the time.sleep() will print the messages in order as expected.
+Another thing to note here is that, in some of the parts in this part, we are introducing some artificial delay using time.Sleep() to achieve some of the scenarios listed in the parts. We know that TCP orders messages in a queue. So this time.Sleep() tends to mess up the ordering of messages. So if you see the messages printed out of order, please do ignore it. Focus on the logic presented in the explanation. Rest assured, taking away the time.sleep() will print the messages in order as expected.
 
 New nodes joining the network usually obtain a copy of the clientlist by contacting some arbitrary node. To simulate this behaviour, a `clientlist.json` has been included in the code repository. The clientlist is a data source for the newly spun up client to grab hold of an address from the address space. If the `clientlist.json` is is not empty when the first ever node in the network is spun up, you will see a message like this:
 
@@ -385,7 +385,7 @@ And, upon pressing `3` to view clientlist, we see that 1 is indeed not there in 
 
 
 ### 4
-In order to see a scenario, where multiple clients start the election simultaneously, spin up three clients by running `go run main.go` in three separate clients simultaneously. Then kill the coordinator terminal by pressing `ctrl+c`. The discovery phase in the other two terminals would've begun almost at the same time (separated by a few milliseconds). Previously, in order to slow down the message output, the time.Sleep() value of the CoordinatorPing() method was set to 10 seconds. However, in order to bring about the behaviour required by this question, the time.Sleep() was set to 1 second. 
+In order to see a scenario, where multiple clients start the election simultaneously, spin up three clients by running `go run main.go` in three separate clients simultaneously. Then kill the coordinator terminal by pressing `ctrl+c`. The discovery phase in the other two terminals would've begun almost at the same time (separated by a few milliseconds). Previously, in order to slow down the message output, the time.Sleep() value of the CoordinatorPing() method was set to 10 seconds. However, in order to bring about the behaviour required by this part, the time.Sleep() was set to 1 second. 
 ```go
 func (client *Client) Coordinatorping(){ // communicatetocoordinator
 	if (len(client.Clientlist) == 1){
